@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indexarr — Wikidata Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f0ede8;
+    --surface: #faf9f7;
+    --surface2: #f2efe9;
+    --surface3: #e8e4dc;
+    --border: #d4cfc5;
+    --border-dark: #a8a398;
+    --ink: #1a1714;
+    --ink-mid: #4a4540;
+    --ink-dim: #8a8278;
+
+    --wiki: #3366cc;     /* Wikidata blue */
+    --wiki-bg: #eef3fd;
+    --wiki-bdr: #a4bfef;
+
+    --cine: #c4742a;     /* Cinemagoer amber */
+    --cine-bg: #fef3e6;
+    --cine-bdr: #edbe8a;
+
+    --green: #2a7a3e;
+    --green-bg: #eaf5ee;
+    --green-bdr: #8ecfa0;
+
+    --amber: #b85c00;
+    --amber-bg: #fef4e6;
+    --amber-bdr: #eabf80;
+
+    --red: #a82020;
+    --red-bg: #fbeaea;
+    --red-bdr: #e8a0a0;
+
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; height: 60px;
+    background: var(--ink);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: var(--font-mono);
+    font-size: 17px; font-weight: 600;
+    color: #f0ede8; letter-spacing: -0.5px;
+  }
+  .logo .edition {
+    font-size: 10px; color: var(--cine);
+    letter-spacing: 3px; text-transform: uppercase;
+    display: block; margin-top: 1px;
+  }
+  .topbar-badges { display: flex; gap: 10px; align-items: center; }
+  .src-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 5px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .5px;
+  }
+  .src-badge.wiki { background: var(--wiki-bg); color: var(--wiki); border: 1px solid var(--wiki-bdr); }
+  .src-badge.cine { background: var(--cine-bg); color: var(--cine); border: 1px solid var(--cine-bdr); }
+  .src-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: 6px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .18s;
+  }
+  .btn-primary { background: var(--wiki); color: #fff; }
+  .btn-primary:hover { background: #2550aa; }
+  .btn-cine { background: var(--cine); color: #fff; }
+  .btn-cine:hover { background: #a06020; }
+  .btn-ghost { background: transparent; color: var(--ink-mid); border: 1.5px solid var(--border-dark); }
+  .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 60px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 270px; flex-shrink: 0;
+    background: var(--surface);
+    border-right: 2px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 20px 16px; gap: 4px;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--ink-dim); padding: 12px 8px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--ink-mid);
+    transition: all .14s;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--ink); }
+  .nav-item.active { background: var(--wiki-bg); color: var(--wiki); }
+  .nav-badge {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 10px;
+    background: var(--surface3); color: var(--ink-dim);
+  }
+  .nav-badge.ok { background: var(--green-bg); color: var(--green); }
+  .nav-badge.warn { background: var(--amber-bg); color: var(--amber); }
+  .nav-badge.err { background: var(--red-bg); color: var(--red); }
+
+  /* Source selector */
+  .source-selector {
+    margin: 8px 0;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 14px;
+  }
+  .source-selector-title {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px;
+  }
+  .source-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px; font-size: 13px; font-weight: 500;
+  }
+  .source-toggle:last-child { margin-bottom: 0; }
+  .toggle {
+    position: relative; width: 36px; height: 20px;
+    cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    width: 100%; height: 100%; border-radius: 10px;
+    background: var(--border-dark); transition: background .2s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--wiki); }
+  .toggle-track::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: white; transition: transform .2s;
+  }
+  .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
+
+  /* ── Main ── */
+  .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2.5px dashed var(--border-dark);
+    border-radius: 10px; padding: 40px;
+    text-align: center; cursor: pointer;
+    transition: all .2s; background: var(--surface);
+    margin-bottom: 24px;
+  }
+  .upload-zone:hover { border-color: var(--wiki); background: var(--wiki-bg); }
+  .upload-zone-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-zone-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .upload-zone-sub { font-size: 13px; color: var(--ink-dim); }
+
+  /* ── Source info cards ── */
+  .source-info-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-bottom: 24px;
+  }
+  .source-card {
+    background: var(--surface); border-radius: 10px;
+    padding: 20px; border: 1.5px solid var(--border);
+  }
+  .source-card-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .source-card-icon { font-size: 24px; }
+  .source-card-title { font-size: 15px; font-weight: 700; }
+  .source-card-sub { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
+  .source-card-body { font-size: 13px; color: var(--ink-mid); line-height: 1.65; }
+  .source-card.wiki-card { border-left: 3px solid var(--wiki); }
+  .source-card.cine-card { border-left: 3px solid var(--cine); }
+
+  .feature-list { list-style: none; margin-top: 10px; }
+  .feature-list li { 
+    font-size: 12px; color: var(--ink-mid);
+    padding: 3px 0; display: flex; align-items: flex-start; gap: 6px;
+  }
+  .feature-list li::before { content: '→'; color: var(--wiki); font-weight: 600; }
+  .cine-card .feature-list li::before { color: var(--cine); }
+
+  /* ── Progress ── */
+  .scan-progress {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 20px 24px;
+    margin-bottom: 20px; display: none;
+  }
+  .scan-progress.active { display: block; }
+  .scan-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .scan-title { font-size: 14px; font-weight: 600; }
+  .scan-count { font-family: var(--font-mono); font-size: 12px; color: var(--wiki); }
+  .progress-wrap { background: var(--surface3); border-radius: 3px; height: 5px; margin-bottom: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; background: var(--wiki); transition: width .3s; }
+  .scan-sources {
+    display: flex; gap: 10px; margin-bottom: 8px;
+  }
+  .source-indicator {
+    display: flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .5px;
+    padding: 3px 8px; border-radius: 4px;
+  }
+  .source-indicator.wiki { background: var(--wiki-bg); color: var(--wiki); }
+  .source-indicator.cine { background: var(--cine-bg); color: var(--cine); }
+  .source-indicator .pulse {
+    width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+  .scan-current { font-family: var(--font-mono); font-size: 11px; color: var(--ink-dim); }
+
+  /* ── Stats ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 12px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 16px 18px;
+  }
+  .stat-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 800; }
+  .stat-value.blue { color: var(--wiki); }
+  .stat-value.orange { color: var(--cine); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 11px 14px;
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink-dim); font-weight: 500; text-align: left;
+    background: var(--surface2); border-bottom: 1.5px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 11px 14px; font-size: 13px; color: var(--ink-mid); vertical-align: middle; }
+  .td-main { color: var(--ink); font-weight: 600; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: .5px;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .badge-ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-bdr); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-bdr); }
+  .badge-err { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-bdr); }
+  .badge-wiki { background: var(--wiki-bg); color: var(--wiki); border: 1px solid var(--wiki-bdr); }
+  .badge-cine { background: var(--cine-bg); color: var(--cine); border: 1px solid var(--cine-bdr); }
+
+  /* Multi-source result display */
+  .multi-source {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .source-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px;
+  }
+  .source-icon { width: 16px; height: 16px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
+  .source-icon.wiki { background: var(--wiki-bg); color: var(--wiki); }
+  .source-icon.cine { background: var(--cine-bg); color: var(--cine); }
+  .source-icon.imdb { background: #f5c518; color: #000; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,23,20,0.75); backdrop-filter: blur(4px);
+    z-index: 200; display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 2px solid var(--border-dark);
+    border-radius: 12px; padding: 28px;
+    width: 580px; max-width: 95vw; max-height: 80vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-dim); margin-top: 4px; }
+  .modal-close {
+    background: var(--surface2); border: none; border-radius: 5px;
+    width: 28px; height: 28px; cursor: pointer; color: var(--ink-mid);
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    transition: .15s;
+  }
+  .modal-close:hover { background: var(--surface3); }
+
+  .modal-input {
+    width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 6px; padding: 9px 14px;
+    font-family: 'Syne', sans-serif; font-size: 14px; color: var(--ink);
+    outline: none; transition: border-color .15s;
+  }
+  .modal-input:focus { border-color: var(--wiki); }
+  .modal-search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+
+  .source-tabs {
+    display: flex; gap: 6px; margin-bottom: 14px;
+    background: var(--surface2); border-radius: 6px; padding: 4px; width: fit-content;
+  }
+  .source-tab {
+    padding: 5px 14px; border-radius: 5px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: .14s; color: var(--ink-mid);
+  }
+  .source-tab.active-wiki { background: var(--wiki-bg); color: var(--wiki); }
+  .source-tab.active-cine { background: var(--cine-bg); color: var(--cine); }
+  .source-tab:not(.active-wiki):not(.active-cine):hover { color: var(--ink); }
+
+  .result-list { display: flex; flex-direction: column; gap: 8px; }
+  .result-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    cursor: pointer; transition: .15s;
+  }
+  .result-item:hover { border-color: var(--wiki); background: var(--wiki-bg); }
+  .result-item.selected { border-color: var(--green); background: var(--green-bg); }
+  .result-poster {
+    width: 44px; height: 64px; border-radius: 5px;
+    background: var(--surface3); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; overflow: hidden;
+  }
+  .result-poster img { width: 100%; height: 100%; object-fit: cover; }
+  .result-info { flex: 1; }
+  .result-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .result-meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-dim); margin-bottom: 5px; }
+  .result-ids { display: flex; gap: 5px; flex-wrap: wrap; }
+  .result-desc { font-size: 12px; color: var(--ink-mid); line-height: 1.5; margin-top: 5px; }
+
+  .modal-queue {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 14px;
+    font-size: 12px; color: var(--ink-mid);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ── Python snippet ── */
+  .code-block {
+    background: var(--ink); border-radius: 8px;
+    padding: 18px 20px; margin-top: 16px;
+    overflow-x: auto;
+  }
+  .code-block pre {
+    font-family: var(--font-mono); font-size: 12px;
+    color: #e2e8f0; line-height: 1.7; white-space: pre;
+  }
+  .code-comment { color: #64748b; }
+  .code-keyword { color: #818cf8; }
+  .code-string { color: #86efac; }
+  .code-func { color: #fbbf24; }
+
+  /* ── Empty ── */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--ink-dim); }
+  .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state-title { font-size: 17px; font-weight: 700; color: var(--ink-mid); margin-bottom: 8px; }
+  .empty-state-sub { font-size: 14px; }
+
+  /* ── Toast ── */
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--ink); border: 1px solid #2a2520;
+    border-radius: 8px; padding: 12px 18px;
+    font-size: 13px; color: #f0ede8;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    min-width: 260px; display: flex; align-items: center; gap: 10px;
+    animation: slideIn .2s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+
+  .spinner {
+    width: 13px; height: 13px;
+    border: 2px solid var(--border-dark);
+    border-top-color: var(--wiki);
+    border-radius: 50%;
+    animation: spin .6s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    Indexarr
+    <span class="edition">Wikidata Edition</span>
+  </div>
+  <div class="topbar-badges">
+    <div class="src-badge wiki"><div class="dot"></div> Wikidata SPARQL</div>
+    <div class="src-badge cine"><div class="dot"></div> Cinemagoer/IMDb</div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportDB()">⬇ Export JSON</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">Vue</div>
+    <div class="nav-item active" onclick="setView('all')" id="nav-all">
+      <span>📋 Tous</span><span class="nav-badge" id="badge-all">0</span>
+    </div>
+    <div class="nav-item" onclick="setView('validated')" id="nav-validated">
+      <span>✅ Validés</span><span class="nav-badge ok" id="badge-validated">0</span>
+    </div>
+    <div class="nav-item" onclick="setView('pending')" id="nav-pending">
+      <span>⚠️ À vérifier</span><span class="nav-badge warn" id="badge-pending">0</span>
+    </div>
+    <div class="nav-item" onclick="setView('quarantine')" id="nav-quarantine">
+      <span>❌ Quarantaine</span><span class="nav-badge err" id="badge-quarantine">0</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:10px;">Sources actives</div>
+    <div class="source-selector">
+      <div class="source-selector-title">Moteurs de recherche</div>
+      <div class="source-toggle">
+        <span style="font-size:13px;font-weight:600;color:var(--wiki)">🌐 Wikidata SPARQL</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggleWiki" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="source-toggle">
+        <span style="font-size:13px;font-weight:600;color:var(--cine)">🎬 Cinemagoer/IMDb</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggleCine" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div class="source-toggle" style="margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:600;color:var(--ink-mid)">🎭 TMDB (fallback)</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggleTmdb">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:10px;">Import</div>
+    <div class="nav-item" onclick="document.getElementById('fileInput').click()">
+      <span>📂 Importer fichier</span>
+    </div>
+    <div class="nav-item" onclick="loadDB()">
+      <span>💾 Charger DB locale</span>
+    </div>
+    <div class="nav-item" onclick="showPythonSnippet()">
+      <span>🐍 Backend Python</span>
+    </div>
+    <div class="nav-item" onclick="clearAll()">
+      <span>🗑 Réinitialiser</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:10px;">Config</div>
+    <div style="padding: 8px 12px;">
+      <label style="font-size:12px; color:var(--ink-dim); display:block; margin-bottom:6px;">Seuil auto-validation</label>
+      <input type="range" min="50" max="99" value="75" id="thresholdSlider"
+        style="width:100%; accent-color:var(--wiki);"
+        oninput="document.getElementById('thresholdVal').textContent=this.value">
+      <div style="font-family:var(--font-mono); font-size:12px; color:var(--wiki); text-align:right; margin-top:4px;">
+        Score ≥ <span id="thresholdVal">75</span>
+      </div>
+    </div>
+    <div style="padding:4px 12px;">
+      <label style="font-size:12px; color:var(--ink-dim); display:block; margin-bottom:6px;">Clé TMDB (optionnel)</label>
+      <input type="text" id="tmdbKeyInput" placeholder="Fallback TMDB…"
+        class="modal-input" style="width:100%;font-size:12px;padding:7px 10px;"
+        oninput="TMDB_KEY=this.value">
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="mainArea">
+    <!-- Source info cards -->
+    <div class="source-info-grid">
+      <div class="source-card wiki-card">
+        <div class="source-card-header">
+          <span class="source-card-icon">🌐</span>
+          <div>
+            <div class="source-card-title" style="color:var(--wiki)">Wikidata SPARQL</div>
+            <div class="source-card-sub">Données libres · Pas de limite d'API</div>
+          </div>
+        </div>
+        <div class="source-card-body">
+          Base de connaissance ouverte de la Wikimedia Foundation. Aucune clé requise.
+          <ul class="feature-list">
+            <li>Identifiants QID + P345 (IMDb ID) + P4947 (TMDB ID)</li>
+            <li>Titres multilingues natifs</li>
+            <li>Données libres de droits, requêtes SPARQL illimitées</li>
+            <li>Couverture films, séries, documentaires</li>
+          </ul>
+        </div>
+      </div>
+      <div class="source-card cine-card">
+        <div class="source-card-header">
+          <span class="source-card-icon">🎬</span>
+          <div>
+            <div class="source-card-title" style="color:var(--cine)">Cinemagoer / IMDb</div>
+            <div class="source-card-sub">Python · imdbpy · Pas de clé requise</div>
+          </div>
+        </div>
+        <div class="source-card-body">
+          Bibliothèque Python qui interroge IMDb sans API officielle. Backend requis.
+          <ul class="feature-list">
+            <li>IMDb ID direct · Cast complet · Notes</li>
+            <li>Recherche par titre avec score de pertinence</li>
+            <li>Données épisodes et saisons pour les séries</li>
+            <li>Nécessite un backend Python (voir snippet)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-zone-icon">📁</div>
+      <div class="upload-zone-title">Importer votre bibliothèque</div>
+      <div class="upload-zone-sub">CSV · TXT · JSON — WizTree, PowerShell, etc.</div>
+    </div>
+    <input type="file" id="fileInput" accept=".csv,.txt,.json" onchange="handleFile(event)" style="display:none">
+
+    <!-- Scan progress -->
+    <div class="scan-progress" id="scanProgress">
+      <div class="scan-header">
+        <div class="scan-title"><div class="spinner" style="margin-right:8px;"></div> Analyse en cours…</div>
+        <div class="scan-count" id="scanCount">0 / 0</div>
+      </div>
+      <div class="scan-sources">
+        <div class="source-indicator wiki" id="indWiki">
+          <div class="pulse"></div> WIKIDATA
+        </div>
+        <div class="source-indicator cine" id="indCine" style="display:none">
+          <div class="pulse"></div> CINEMAGOER
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="scan-current" id="scanCurrent">Initialisation…</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value blue" id="sTotal">0</div></div>
+      <div class="stat-card"><div class="stat-label">Via Wikidata</div><div class="stat-value blue" id="sWiki">0</div></div>
+      <div class="stat-card"><div class="stat-label">Via IMDb</div><div class="stat-value orange" id="sCine">0</div></div>
+      <div class="stat-card"><div class="stat-label">À vérifier</div><div class="stat-value amber" id="sPending">0</div></div>
+      <div class="stat-card"><div class="stat-label">Quarantaine</div><div class="stat-value red" id="sQuarantine">0</div></div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea">
+      <div class="empty-state">
+        <div class="empty-state-icon">🌐</div>
+        <div class="empty-state-title">Wikidata Edition</div>
+        <div class="empty-state-sub">Importez un fichier pour démarrer — aucune clé API requise pour Wikidata</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verify Modal -->
+<div class="modal-overlay" id="verifyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Vérification manuelle</div>
+        <div class="modal-sub" id="modalSubtitle">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-queue" id="modalQueue" style="display:none">
+      📋 File d'attente : <strong id="queueInfo" style="color:var(--wiki)"></strong>
+    </div>
+    <div class="modal-search-bar">
+      <input class="modal-input" id="modalSearchInput" type="text" placeholder="Titre à rechercher…"
+        onkeydown="if(event.key==='Enter') runModalSearch()">
+      <button class="btn btn-primary" onclick="runModalSearch()">🔍</button>
+    </div>
+    <div class="source-tabs">
+      <div class="source-tab active-wiki" onclick="setModalSource('wiki')" id="tabWiki">🌐 Wikidata</div>
+      <div class="source-tab" onclick="setModalSource('cine')" id="tabCine">🎬 IMDb</div>
+    </div>
+    <div id="modalResults" class="result-list">
+      <div style="text-align:center;padding:24px;color:var(--ink-dim);font-size:13px">Tapez un titre et recherchez</div>
+    </div>
+  </div>
+</div>
+
+<!-- Python snippet modal -->
+<div class="modal-overlay" id="pythonModal">
+  <div class="modal" style="width:700px;max-width:95vw;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">🐍 Backend Python — Cinemagoer</div>
+        <div class="modal-sub">Flask · imdbpy · À lancer en local</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('pythonModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink-mid);line-height:1.65;margin-bottom:4px;">
+      Cinemagoer (anciennement IMDbPY) scrape IMDb sans clé officielle. Ce snippet crée un micro-serveur local que le frontend interroge.
+    </p>
+    <div class="code-block">
+      <pre><span class="code-comment"># requirements.txt</span>
+<span class="code-comment"># cinemagoer flask flask-cors</span>
+
+<span class="code-keyword">from</span> flask <span class="code-keyword">import</span> Flask, request, jsonify
+<span class="code-keyword">from</span> flask_cors <span class="code-keyword">import</span> CORS
+<span class="code-keyword">import</span> imdb
+
+app = Flask(__name__)
+CORS(app)
+ia  = imdb.Cinemagoer()
+
+<span class="code-keyword">@app.route</span>(<span class="code-string">'/search'</span>)
+<span class="code-keyword">def</span> <span class="code-func">search</span>():
+    q    = request.args.get(<span class="code-string">'q'</span>, <span class="code-string">''</span>)
+    kind = request.args.get(<span class="code-string">'kind'</span>, <span class="code-string">'movie'</span>)  <span class="code-comment"># movie | tv series</span>
+    results = ia.search_movie(q) <span class="code-keyword">if</span> kind == <span class="code-string">'movie'</span> <span class="code-keyword">else</span> ia.search_movie(q)
+    out = []
+    <span class="code-keyword">for</span> r <span class="code-keyword">in</span> results[:8]:
+        ia.update(r, [<span class="code-string">'main'</span>])
+        out.append({
+            <span class="code-string">'imdb_id'</span>:  r.movieID,
+            <span class="code-string">'title'</span>:    r.get(<span class="code-string">'title'</span>),
+            <span class="code-string">'year'</span>:     r.get(<span class="code-string">'year'</span>),
+            <span class="code-string">'rating'</span>:   r.get(<span class="code-string">'rating'</span>),
+            <span class="code-string">'poster'</span>:   r.get(<span class="code-string">'full-size cover url'</span>),
+            <span class="code-string">'kind'</span>:     r.get(<span class="code-string">'kind'</span>),
+        })
+    <span class="code-keyword">return</span> jsonify(out)
+
+<span class="code-keyword">if</span> __name__ == <span class="code-string">'__main__'</span>:
+    app.run(port=<span class="code-string">5001</span>)</pre>
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;background:var(--amber-bg);border:1px solid var(--amber-bdr);border-radius:7px;font-size:12px;color:var(--amber);">
+      ⚠️ Ce backend doit tourner en local sur <strong>http://localhost:5001</strong> · Wikidata fonctionne sans backend (navigateur direct)
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  INDEXARR — Wikidata Edition
+// ═══════════════════════════════════════════════
+
+let TMDB_KEY = '';
+let BACKEND_URL = 'http://localhost:5001';
+let modalSource = 'wiki';
+
+let db = { entries: [], version: 2, lastScan: null };
+let currentView = 'all';
+let verifyQueue = [], currentVerifyIdx = 0, currentVerifyId = null;
+
+// ── PARSING ──────────────────────────────────────
+function parseFileName(raw) {
+  let name = raw.replace(/\.(mkv|mp4|avi|mov|ts|m2ts|wmv|flv|webm)$/i, '');
+  let type = (/S\d{2}E\d{2}|saison\s*\d|season\s*\d|\d+x\d+/i.test(name)) ? 'series' : 'movie';
+  let year = null;
+  const ym = name.match(/[\(\[\.\s_-](19\d{2}|20\d{2})[\)\]\.\s_-]|[\(\[\.\s_-](19\d{2}|20\d{2})$/);
+  if (ym) year = parseInt(ym[1] || ym[2]);
+  let title = name;
+  if (year) title = title.replace(new RegExp(`[\\(\\[\\.\\s_-]?${year}.*$`), '');
+  title = title.replace(/\b(4K|2160p|1080p|720p|480p|BluRay|BDRip|BRRip|DVDRip|WEB-DL|WEBRip|HDTV|x264|x265|HEVC|AAC|AC3|DTS|HDR|Remux)\b.*/i, '');
+  title = title.replace(/[._]/g, ' ').replace(/\(\s*\)|\[\s*\]/g, '').replace(/\s{2,}/g, ' ').trim().replace(/[-–—\s]+$/, '').trim();
+  if (!title || title.length < 2) title = raw.replace(/\.[^.]+$/, '').replace(/[._]/g, ' ').trim();
+  return { title, year, type };
+}
+
+function fuzzyScore(a, b) {
+  a = a.toLowerCase().trim(); b = b.toLowerCase().trim();
+  if (a === b) return 100;
+  const shorter = a.length < b.length ? a : b;
+  const longer  = a.length < b.length ? b : a;
+  let m = 0; for (let c of shorter) if (longer.includes(c)) m++;
+  return Math.round((m / longer.length) * 100);
+}
+
+// ── WIKIDATA SPARQL ───────────────────────────────
+async function searchWikidata(title, year, type) {
+  const typeFilter = type === 'series'
+    ? `?item wdt:P31/wdt:P279* wd:Q5398426 .` // television series
+    : `?item wdt:P31/wdt:P279* wd:Q11424 .`;   // film
+  const yearFilter = year
+    ? `FILTER(YEAR(?date) = ${year} || YEAR(?date) = ${year-1} || YEAR(?date) = ${year+1})` : '';
+
+  const sparql = `
+    SELECT ?item ?itemLabel ?date ?imdb ?tmdb ?poster WHERE {
+      ?item rdfs:label ?label .
+      FILTER(LANG(?label) = "fr" || LANG(?label) = "en")
+      FILTER(CONTAINS(LCASE(?label), "${title.toLowerCase().replace(/"/g, '')}"))
+      ${typeFilter}
+      OPTIONAL { ?item wdt:P577 ?date . }
+      OPTIONAL { ?item wdt:P345 ?imdb . }
+      OPTIONAL { ?item wdt:P4947 ?tmdb . }
+      OPTIONAL { ?item wdt:P18 ?poster . }
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
+    } LIMIT 8`;
+
+  const url = `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`;
+  try {
+    const r = await fetch(url, { headers: { 'Accept': 'application/sparql-results+json' } });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.results.bindings.map(b => ({
+      qid:    b.item?.value.split('/').pop(),
+      title:  b.itemLabel?.value,
+      year:   b.date?.value ? b.date.value.split('-')[0] : null,
+      imdbId: b.imdb?.value,
+      tmdbId: b.tmdb?.value,
+      poster: b.poster?.value || null,
+      source: 'wikidata'
+    }));
+  } catch { return null; }
+}
+
+// ── CINEMAGOER (local backend) ────────────────────
+async function searchCinemagoer(title, type) {
+  try {
+    const r = await fetch(`${BACKEND_URL}/search?q=${encodeURIComponent(title)}&kind=${type}`);
+    if (!r.ok) return null;
+    return (await r.json()).map(x => ({ ...x, source: 'cinemagoer' }));
+  } catch { return null; }
+}
+
+// ── SCAN ──────────────────────────────────────────
+function handleFile(e) { processFile(e.target.files[0]); }
+
+async function processFile(file) {
+  const text = await file.text();
+  let lines = [];
+  if (file.name.endsWith('.json')) {
+    try {
+      const p = JSON.parse(text);
+      if (p.version && p.entries) { mergeScanDB(p); return; }
+      lines = Array.isArray(p) ? p.map(x => String(x)) : Object.values(p).flat().map(String);
+    } catch { toast('❌ JSON invalide', 'err'); return; }
+  } else {
+    lines = text.split('\n').map(l => l.trim()).filter(Boolean).map(l => l.split(/[,;\t]/)[0].trim());
+  }
+  const ext = /\.(mkv|mp4|avi|mov|ts|m2ts|wmv|flv|webm)/i;
+  lines = lines.filter(l => ext.test(l) || l.length > 3)
+               .map(l => l.replace(/\\/g, '/').split('/').pop())
+               .filter(Boolean);
+  lines = [...new Set(lines)];
+  if (!lines.length) { toast('⚠️ Aucun fichier détecté', 'warn'); return; }
+  toast(`📂 ${lines.length} fichiers détectés, lancement…`, 'info');
+  await scanFiles(lines);
+}
+
+function mergeScanDB(importedDB) {
+  const existing = new Set(db.entries.map(e => e.rawName));
+  let added = 0, skipped = 0;
+  for (const e of importedDB.entries) {
+    if (existing.has(e.rawName)) { skipped++; continue; }
+    db.entries.push(e); added++;
+  }
+  saveDB(); refreshUI();
+  toast(`✅ ${added} nouveaux, ${skipped} ignorés (déjà présents)`, 'ok');
+}
+
+async function scanFiles(lines) {
+  const existing = new Set(db.entries.map(e => e.rawName));
+  const newLines = lines.filter(l => !existing.has(l));
+  if (!newLines.length) { toast('ℹ️ Tous présents en DB', 'info'); return; }
+
+  const prog = document.getElementById('scanProgress');
+  prog.classList.add('active');
+  document.getElementById('statsRow').style.display = 'grid';
+
+  const useWiki = document.getElementById('toggleWiki').checked;
+  const useCine = document.getElementById('toggleCine').checked;
+  document.getElementById('indWiki').style.display = useWiki ? 'flex' : 'none';
+  document.getElementById('indCine').style.display = useCine ? 'flex' : 'none';
+
+  // Crée les entrées skeleton
+  for (const rawName of newLines) {
+    const { title, year, type } = parseFileName(rawName);
+    db.entries.push({ id: crypto.randomUUID(), rawName, parsedName: title, parsedYear: year, type, status: 'scanning', matchScore: null, wikiQid: null, imdbId: null, tmdbId: null, metadata: null, source: null, indexed_at: new Date().toISOString() });
+  }
+  refreshUI();
+
+  let done = 0;
+  const BATCH = 2;
+  for (let i = 0; i < newLines.length; i += BATCH) {
+    const batch = newLines.slice(i, i + BATCH);
+    await Promise.all(batch.map(async rawName => {
+      await scanOne(rawName, useWiki, useCine);
+      done++;
+      const pct = Math.round((done / newLines.length) * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('scanCount').textContent = `${done} / ${newLines.length}`;
+      document.getElementById('scanCurrent').textContent = rawName;
+      refreshUI();
+    }));
+  }
+  prog.classList.remove('active');
+  saveDB();
+  toast(`✅ Terminé : ${done} fichiers analysés`, 'ok');
+  buildVerifyQueue();
+}
+
+async function scanOne(rawName, useWiki, useCine) {
+  const entry = db.entries.find(e => e.rawName === rawName);
+  if (!entry) return;
+  const { title, year, type } = parseFileName(rawName);
+  entry.parsedName = title; entry.parsedYear = year; entry.type = type;
+
+  const threshold = parseInt(document.getElementById('thresholdSlider').value);
+  let best = null, bestScore = 0;
+
+  // Wikidata
+  if (useWiki) {
+    const wres = await searchWikidata(title, year, type);
+    if (wres && wres.length > 0) {
+      const top = wres[0];
+      const sc = fuzzyScore(title, top.title || '');
+      if (sc > bestScore) { best = top; bestScore = sc; }
+    }
+  }
+
+  // Cinemagoer
+  if (useCine) {
+    const cres = await searchCinemagoer(title, type);
+    if (cres && cres.length > 0) {
+      const top = cres[0];
+      const sc = fuzzyScore(title, top.title || '');
+      if (year && top.year && year === parseInt(top.year)) sc_bonus = Math.min(sc + 15, 100);
+      if (sc > bestScore) { best = top; bestScore = sc; }
+    }
+  }
+
+  if (!best) { entry.status = 'quarantine'; return; }
+
+  entry.matchScore = bestScore;
+  entry.source = best.source;
+  entry.wikiQid = best.qid || null;
+  entry.imdbId = best.imdb_id || best.imdbId || null;
+  entry.tmdbId = best.tmdb_id || best.tmdbId || null;
+  entry.metadata = {
+    title: best.title,
+    year: best.year,
+    poster: best.poster || null,
+    source: best.source
+  };
+  entry.status = bestScore >= threshold ? 'validated' : 'pending';
+}
+
+// ── VERIFY MODAL ──────────────────────────────────
+function buildVerifyQueue() {
+  verifyQueue = db.entries.filter(e => e.status === 'pending' || e.status === 'quarantine').map(e => e.id);
+  currentVerifyIdx = 0;
+  updateBadges();
+}
+
+function openVerify(id) {
+  currentVerifyId = id;
+  if (!verifyQueue.includes(id)) { verifyQueue = [id]; currentVerifyIdx = 0; }
+  else currentVerifyIdx = verifyQueue.indexOf(id);
+  renderVerifyModal();
+  document.getElementById('verifyModal').classList.add('open');
+}
+
+function renderVerifyModal() {
+  const entry = db.entries.find(e => e.id === verifyQueue[currentVerifyIdx]);
+  if (!entry) { closeModal(); return; }
+  currentVerifyId = entry.id;
+  document.getElementById('modalSubtitle').textContent = `📄 ${entry.rawName}`;
+  const rem = verifyQueue.length - currentVerifyIdx;
+  const q = document.getElementById('modalQueue');
+  if (rem > 1) { q.style.display = 'flex'; document.getElementById('queueInfo').textContent = `${currentVerifyIdx + 1} / ${verifyQueue.length}`; }
+  else q.style.display = 'none';
+  document.getElementById('modalSearchInput').value = entry.parsedName || entry.rawName.replace(/\.[^.]+$/, '');
+  document.getElementById('modalResults').innerHTML = `<div style="text-align:center;padding:24px;color:var(--ink-dim);font-size:13px">Cliquez sur Rechercher</div>`;
+}
+
+function setModalSource(s) {
+  modalSource = s;
+  document.getElementById('tabWiki').className = 'source-tab' + (s==='wiki'?' active-wiki':'');
+  document.getElementById('tabCine').className = 'source-tab' + (s==='cine'?' active-cine':'');
+}
+
+async function runModalSearch() {
+  const q = document.getElementById('modalSearchInput').value.trim();
+  if (!q) return;
+  const entry = db.entries.find(e => e.id === currentVerifyId);
+  const type = entry ? entry.type : 'movie';
+
+  document.getElementById('modalResults').innerHTML = `<div style="text-align:center;padding:24px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--ink-dim);font-size:13px"><div class="spinner"></div> Recherche ${modalSource}…</div>`;
+
+  let results = [];
+  if (modalSource === 'wiki') results = (await searchWikidata(q, null, type)) || [];
+  else results = (await searchCinemagoer(q, type)) || [];
+
+  if (!results.length) {
+    document.getElementById('modalResults').innerHTML = `<div style="text-align:center;padding:24px;color:var(--red)">Aucun résultat</div>`;
+    return;
+  }
+
+  document.getElementById('modalResults').innerHTML = results.slice(0, 8).map(item => {
+    const ids = [];
+    if (item.qid) ids.push(`<span class="badge badge-wiki" style="font-size:9px">QID ${item.qid}</span>`);
+    if (item.imdb_id || item.imdbId) ids.push(`<span class="badge badge-cine" style="font-size:9px">IMDb tt${item.imdb_id || item.imdbId}</span>`);
+    if (item.tmdb_id || item.tmdbId) ids.push(`<span class="badge badge-wiki" style="font-size:9px">TMDB ${item.tmdb_id || item.tmdbId}</span>`);
+
+    return `
+      <div class="result-item" onclick="selectResult(${JSON.stringify(escObj(item))})">
+        <div class="result-poster">${item.poster ? `<img src="${item.poster}" alt="">` : '🎬'}</div>
+        <div class="result-info">
+          <div class="result-title">${esc(item.title)}</div>
+          <div class="result-meta">${item.year || '?'} · via ${item.source}</div>
+          <div class="result-ids">${ids.join('')}</div>
+        </div>
+        <div style="padding-left:8px;font-size:18px">○</div>
+      </div>`;
+  }).join('');
+}
+
+function escObj(obj) {
+  // Sécurise pour inline JSON
+  return JSON.stringify(obj).replace(/'/g, "\\'");
+}
+
+function selectResult(itemStr) {
+  let item;
+  try { item = typeof itemStr === 'string' ? JSON.parse(itemStr) : itemStr; } catch { return; }
+  const entry = db.entries.find(e => e.id === currentVerifyId);
+  if (!entry) return;
+
+  entry.wikiQid = item.qid || null;
+  entry.imdbId  = item.imdb_id || item.imdbId || null;
+  entry.tmdbId  = item.tmdb_id || item.tmdbId || null;
+  entry.status  = 'validated';
+  entry.matchScore = 100;
+  entry.source  = item.source;
+  entry.metadata = { title: item.title, year: item.year, poster: item.poster || null, source: item.source };
+  entry.indexed_at = new Date().toISOString();
+
+  event.currentTarget.classList.add('selected');
+  event.currentTarget.querySelector('div:last-child').textContent = '✅';
+
+  saveDB(); updateBadges();
+  toast(`✅ "${item.title}" validé (${item.source})`, 'ok');
+
+  setTimeout(() => {
+    currentVerifyIdx++;
+    if (currentVerifyIdx < verifyQueue.length) renderVerifyModal();
+    else { closeModal(); toast('🎉 Toutes les vérifications terminées !', 'ok'); }
+    refreshUI();
+  }, 600);
+}
+
+function closeModal() {
+  document.getElementById('verifyModal').classList.remove('open');
+  currentVerifyId = null; refreshUI();
+}
+
+function startBatchVerify() {
+  buildVerifyQueue();
+  if (!verifyQueue.length) { toast('✅ Rien à vérifier', 'ok'); return; }
+  currentVerifyIdx = 0; renderVerifyModal();
+  document.getElementById('verifyModal').classList.add('open');
+}
+
+function showPythonSnippet() {
+  document.getElementById('pythonModal').classList.add('open');
+}
+
+// ── UI ────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + v)?.classList.add('active');
+  renderTable();
+}
+
+function refreshUI() { updateBadges(); renderTable(); updateStats(); }
+
+function updateStats() {
+  const all = db.entries.filter(e => e.status !== 'scanning');
+  document.getElementById('sTotal').textContent = all.length;
+  document.getElementById('sWiki').textContent  = all.filter(e => e.source === 'wikidata').length;
+  document.getElementById('sCine').textContent  = all.filter(e => e.source === 'cinemagoer').length;
+  document.getElementById('sPending').textContent    = all.filter(e => e.status === 'pending').length;
+  document.getElementById('sQuarantine').textContent = all.filter(e => e.status === 'quarantine').length;
+}
+
+function updateBadges() {
+  const all = db.entries;
+  document.getElementById('badge-all').textContent       = all.filter(e => e.status !== 'scanning').length;
+  document.getElementById('badge-validated').textContent = all.filter(e => e.status === 'validated').length;
+  document.getElementById('badge-pending').textContent   = all.filter(e => e.status === 'pending').length;
+  document.getElementById('badge-quarantine').textContent= all.filter(e => e.status === 'quarantine').length;
+}
+
+function renderTable() {
+  const area = document.getElementById('resultsArea');
+  const statsRow = document.getElementById('statsRow');
+  let filtered = db.entries.filter(e => currentView === 'all' ? e.status !== 'scanning' : e.status === currentView);
+  const scanning = db.entries.filter(e => e.status === 'scanning');
+
+  if (!filtered.length && !scanning.length) {
+    area.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🌐</div><div class="empty-state-title">Aucune entrée</div><div class="empty-state-sub">Importez ou changez le filtre</div></div>`;
+    return;
+  }
+  statsRow.style.display = 'grid';
+  const pendQ = db.entries.filter(e => e.status === 'pending' || e.status === 'quarantine');
+
+  area.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:700">Résultats <span style="color:var(--ink-dim);font-size:14px;font-weight:400">(${filtered.length})</span></div>
+      <div style="display:flex;gap:10px;">
+        ${pendQ.length ? `<button class="btn btn-primary btn-sm" onclick="startBatchVerify()">⚠️ Vérifier ${pendQ.length}</button>` : ''}
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fichier</th><th>Titre parsé</th><th>Correspondance</th>
+            <th>Année</th><th>Score</th><th>Source</th><th>IDs</th><th>Statut</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${scanning.slice(0,5).map(e => `<tr><td colspan="9"><div style="display:flex;align-items:center;gap:10px;color:var(--ink-dim);font-size:12px;font-family:var(--font-mono)"><div class="spinner"></div>${esc(e.rawName)}</div></td></tr>`).join('')}
+          ${filtered.map(e => renderRow(e)).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderRow(e) {
+  const statusBadge = { validated: `<span class="badge badge-ok">✓ Validé</span>`, pending: `<span class="badge badge-warn">⚠ Vérifier</span>`, quarantine: `<span class="badge badge-err">✗ Quarant.</span>` }[e.status] || '';
+  const score = e.matchScore !== null
+    ? `<div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;"><div style="width:${e.matchScore}%;height:100%;background:${e.matchScore>=75?'var(--green)':e.matchScore>=50?'var(--amber)':'var(--red)'}"></div></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-dim)">${Math.round(e.matchScore)}</span></div>`
+    : '—';
+  const sourceBadge = e.source ? (e.source === 'wikidata' ? `<span class="badge badge-wiki">🌐 Wiki</span>` : `<span class="badge badge-cine">🎬 IMDb</span>`) : '—';
+  const ids = [
+    e.wikiQid ? `<span class="badge badge-wiki" style="font-size:9px">QID ${esc(e.wikiQid)}</span>` : '',
+    e.imdbId  ? `<span class="badge badge-cine" style="font-size:9px">tt${esc(e.imdbId)}</span>` : '',
+    e.tmdbId  ? `<span class="badge" style="font-size:9px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr)">TMDB ${esc(e.tmdbId)}</span>` : ''
+  ].filter(Boolean).join(' ');
+  const action = (e.status === 'pending' || e.status === 'quarantine') ? `<button class="btn btn-ghost btn-sm" onclick="openVerify('${e.id}')">🔍</button>` : `<button class="btn btn-ghost btn-sm" onclick="resetEntry('${e.id}')">↺</button>`;
+
+  return `
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--ink-dim);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.rawName)}">${esc(e.rawName)}</td>
+      <td class="td-main">${esc(e.parsedName || '—')}</td>
+      <td>${e.metadata ? esc(e.metadata.title || '—') : '—'}</td>
+      <td style="font-family:var(--font-mono);font-size:11px">${e.metadata?.year || e.parsedYear || '—'}</td>
+      <td>${score}</td>
+      <td>${sourceBadge}</td>
+      <td>${ids || '—'}</td>
+      <td>${statusBadge}</td>
+      <td>${action}</td>
+    </tr>`;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function resetEntry(id) {
+  const e = db.entries.find(x => x.id === id);
+  if (!e) return;
+  Object.assign(e, { status:'pending', wikiQid:null, imdbId:null, tmdbId:null, metadata:null, matchScore:null, source:null });
+  saveDB(); refreshUI();
+}
+
+// ── EXPORT ────────────────────────────────────────
+function exportCSV() {
+  const h = ['raw_name','parsed_name','parsed_year','type','status','match_score','source','wiki_qid','imdb_id','tmdb_id','title','year','indexed_at'];
+  const rows = db.entries.filter(e => e.status !== 'scanning').map(e => [
+    `"${(e.rawName||'').replace(/"/g,'""')}"`, `"${(e.parsedName||'').replace(/"/g,'""')}"`,
+    e.parsedYear||'', e.type||'', e.status||'',
+    e.matchScore !== null ? Math.round(e.matchScore) : '',
+    e.source||'', e.wikiQid||'', e.imdbId||'', e.tmdbId||'',
+    `"${(e.metadata?.title||'').replace(/"/g,'""')}"`,
+    e.metadata?.year||'', e.indexed_at||''
+  ].join(','));
+  dlFile([h.join(','), ...rows].join('\n'), 'indexarr-wikidata.csv', 'text/csv');
+}
+
+function exportDB() { dlFile(JSON.stringify(db, null, 2), 'indexarr-wikidata-db.json', 'application/json'); }
+
+function dlFile(content, name, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = name; a.click();
+}
+
+function saveDB() { db.lastScan = new Date().toISOString(); try { localStorage.setItem('indexarr_wiki_db', JSON.stringify(db)); } catch {} }
+
+function loadDB() {
+  try {
+    const s = localStorage.getItem('indexarr_wiki_db');
+    if (!s) { toast('ℹ️ Aucune DB locale', 'info'); return; }
+    db = JSON.parse(s); refreshUI();
+    toast(`💾 DB : ${db.entries.length} entrées`, 'ok');
+  } catch { toast('❌ Erreur lecture DB', 'err'); }
+}
+
+function clearAll() {
+  if (!confirm('Réinitialiser ?')) return;
+  db = { entries: [], version: 2, lastScan: null };
+  saveDB(); refreshUI();
+  toast('🗑 Réinitialisé', 'info');
+}
+
+function toast(msg, type = 'info') {
+  const colors = { ok:'#2a7a3e', warn:'#b85c00', err:'#a82020', info:'#3366cc' };
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.borderLeft = `3px solid ${colors[type] || colors.info}`;
+  el.innerHTML = msg; wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor='var(--wiki)'; });
+  zone.addEventListener('dragleave', () => zone.style.borderColor='');
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.style.borderColor=''; processFile(e.dataTransfer.files[0]); });
+
+  try {
+    const s = localStorage.getItem('indexarr_wiki_db');
+    if (s) { db = JSON.parse(s); if (db.entries.length) { refreshUI(); document.getElementById('statsRow').style.display='grid'; toast(`💾 DB restaurée : ${db.entries.length} entrées`, 'ok'); } }
+  } catch {}
+  buildVerifyQueue();
+});
+</script>
+</body>
+</html>
