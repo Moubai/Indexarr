@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indexarr</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161921;
+    --surface2: #1e2230;
+    --surface3: #252940;
+    --border: #2a2f45;
+    --border-bright: #3d4460;
+    --accent: #6366f1;
+    --accent2: #818cf8;
+    --accent-bg: rgba(99,102,241,0.12);
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.12);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.12);
+    --text: #e2e8f0;
+    --text-mid: #94a3b8;
+    --text-dim: #475569;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 58px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: var(--font-mono);
+    font-size: 20px; font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: -1px;
+  }
+  .logo span { color: var(--text-mid); }
+
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+
+  .api-quota {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px; color: var(--text-mid);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 6px;
+  }
+  .api-quota-bar {
+    width: 80px; height: 4px;
+    background: var(--border);
+    border-radius: 2px; overflow: hidden;
+  }
+  .api-quota-fill {
+    height: 100%; border-radius: 2px;
+    background: var(--green);
+    transition: width .4s ease, background .4s;
+  }
+  .api-quota-fill.warn { background: var(--amber); }
+  .api-quota-fill.danger { background: var(--red); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: 7px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .18s;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost {
+    background: transparent; color: var(--text-mid);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--border-bright); color: var(--text); }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 58px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px; flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 20px 16px;
+    gap: 6px;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dim); padding: 10px 8px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; border-radius: 7px;
+    cursor: pointer; transition: all .15s;
+    font-size: 14px; font-weight: 500;
+    color: var(--text-mid);
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent2); }
+  .nav-item .icon { font-size: 16px; margin-right: 8px; }
+  .nav-badge {
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 12px;
+    background: var(--surface3); color: var(--text-mid);
+  }
+  .nav-badge.warn { background: var(--amber-bg); color: var(--amber); }
+  .nav-badge.err { background: var(--red-bg); color: var(--red); }
+  .nav-badge.ok { background: var(--green-bg); color: var(--green); }
+
+  /* ── Main ── */
+  .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border-bright);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--surface);
+    margin-bottom: 28px;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: var(--accent-bg); }
+  .upload-zone-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-zone-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .upload-zone-sub { font-size: 13px; color: var(--text-mid); }
+  #fileInput { display: none; }
+
+  /* ── Progress bar ── */
+  .scan-progress {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .scan-progress.active { display: block; }
+  .scan-progress-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .scan-progress-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .scan-progress-count {
+    font-family: var(--font-mono);
+    font-size: 13px; color: var(--accent2);
+  }
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 4px; height: 6px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width .3s ease;
+  }
+  .scan-current {
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 8px;
+  }
+  .stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.blue { color: var(--accent2); }
+
+  /* ── Results table ── */
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .results-title { font-size: 16px; font-weight: 600; }
+  .results-actions { display: flex; gap: 10px; }
+
+  .filter-tabs {
+    display: flex; gap: 6px; margin-bottom: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px;
+    width: fit-content;
+  }
+  .filter-tab {
+    padding: 6px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+    color: var(--text-mid);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .filter-tab.active { background: var(--accent-bg); color: var(--accent2); }
+  .filter-tab:hover:not(.active) { color: var(--text); }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 500;
+    text-align: left;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 12px 16px;
+    font-size: 13px; color: var(--text-mid);
+    vertical-align: middle;
+  }
+  .td-main { color: var(--text); font-weight: 500; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 600; letter-spacing: .5px;
+    padding: 3px 9px; border-radius: 5px;
+  }
+  .badge-ok { background: var(--green-bg); color: var(--green); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); }
+  .badge-err { background: var(--red-bg); color: var(--red); }
+  .badge-info { background: var(--accent-bg); color: var(--accent2); }
+
+  .score-bar {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12px;
+  }
+  .score-track { width: 60px; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+
+  /* ── Manual verify modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 200; display: none;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    padding: 28px 28px 24px;
+    width: 560px; max-width: 95vw;
+    max-height: 80vh; overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-subtitle {
+    font-size: 12px; color: var(--text-dim);
+    font-family: var(--font-mono); margin-top: 4px;
+  }
+  .modal-close {
+    background: var(--surface2); border: none; border-radius: 6px;
+    width: 28px; height: 28px; cursor: pointer;
+    color: var(--text-mid); font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .modal-close:hover { background: var(--surface3); color: var(--text); }
+
+  .modal-search-bar {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .modal-input {
+    flex: 1;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 9px 14px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; color: var(--text);
+    outline: none; transition: border-color .15s;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+
+  .result-list { display: flex; flex-direction: column; gap: 8px; }
+  .result-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 12px 14px;
+    cursor: pointer; transition: all .15s;
+  }
+  .result-item:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .result-item.selected {
+    border-color: var(--green); background: var(--green-bg);
+  }
+  .result-poster {
+    width: 44px; height: 64px; border-radius: 5px;
+    object-fit: cover; background: var(--surface3);
+    flex-shrink: 0; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .result-poster img { width: 100%; height: 100%; object-fit: cover; }
+  .result-info { flex: 1; }
+  .result-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .result-meta {
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--text-dim); margin-bottom: 6px;
+  }
+  .result-overview { font-size: 12px; color: var(--text-mid); line-height: 1.5; }
+  .result-check { margin-left: auto; padding-left: 8px; font-size: 18px; }
+
+  .modal-queue {
+    margin-bottom: 14px; padding: 10px 14px;
+    background: var(--surface2); border-radius: 7px;
+    border: 1px solid var(--border);
+    font-size: 12px; color: var(--text-mid);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .queue-num {
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--accent2);
+    font-weight: 600;
+  }
+
+  /* ── Export panel ── */
+  .export-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px;
+    margin-bottom: 20px; display: none;
+  }
+  .export-panel.active { display: block; }
+  .export-panel-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-dim);
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state-title { font-size: 17px; font-weight: 600; color: var(--text-mid); margin-bottom: 8px; }
+  .empty-state-sub { font-size: 14px; }
+
+  /* ── Toast ── */
+  .toast-wrap {
+    position: fixed; bottom: 24px; right: 24px;
+    z-index: 300; display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    background: var(--surface2); border: 1px solid var(--border-bright);
+    border-radius: 9px; padding: 12px 18px;
+    font-size: 13px; color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: flex; align-items: center; gap: 10px;
+    min-width: 260px;
+    animation: slideIn .2s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+  /* ── Loading spinner ── */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border-bright);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-wave 1.4s infinite;
+    border-radius: 4px;
+  }
+  @keyframes skeleton-wave { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* DB status indicator */
+  .db-status {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-dim);
+  }
+  .db-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* ── Mediainfo badges ── */
+  .mi-wrap { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+  .mi-badge {
+    display:inline-flex; align-items:center;
+    font-family:var(--font-mono); font-size:9px; font-weight:600; letter-spacing:.3px;
+    padding:2px 6px; border-radius:4px; white-space:nowrap;
+  }
+  .mi-video { background:rgba(99,102,241,.15); color:var(--accent2); }
+  .mi-audio { background:rgba(34,197,94,.12);  color:var(--green); }
+  .mi-hdr   { background:rgba(245,158,11,.15); color:var(--amber); }
+  .mi-sub   { background:rgba(148,163,184,.10);color:var(--text-dim); }
+  .mi-none  { color:var(--text-dim); font-size:11px; }
+  .mi-detail-btn {
+    background:none; border:1px solid var(--border); border-radius:4px;
+    padding:1px 5px; font-family:var(--font-mono); font-size:9px;
+    color:var(--text-dim); cursor:pointer; transition:all .15s;
+  }
+  .mi-detail-btn:hover { border-color:var(--accent); color:var(--accent2); }
+  .mi-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  .mi-section-title {
+    font-family:var(--font-mono); font-size:10px; letter-spacing:2px;
+    text-transform:uppercase; color:var(--text-dim); margin-bottom:10px;
+  }
+  .mi-row {
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:5px 0; border-bottom:1px solid var(--border); font-size:12px;
+  }
+  .mi-row:last-child { border-bottom:none; }
+  .mi-key { color:var(--text-dim); }
+  .mi-val { color:var(--text); font-family:var(--font-mono); font-size:11px; text-align:right; }
+  .mi-track-block {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; padding:12px 14px; margin-bottom:8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">Index<span>arr</span></div>
+  <div class="topbar-right">
+    <div class="db-status">
+      <div class="db-dot" id="dbDot" style="background:var(--text-dim)"></div>
+      <span id="dbLabel">DB non chargée</span>
+    </div>
+    <div class="api-quota">
+      <span>API OMDB</span>
+      <div class="api-quota-bar">
+        <div class="api-quota-fill" id="quotaFill" style="width:0%"></div>
+      </div>
+      <span id="quotaText">0/1000</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="exportDB()">⬇ Export JSON</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">Vue</div>
+    <div class="nav-item active" onclick="setView('all')" id="nav-all">
+      <span><span class="icon">📋</span>Tous</span>
+      <span class="nav-badge" id="badge-all">0</span>
+    </div>
+    <div class="nav-item" onclick="setView('validated')" id="nav-validated">
+      <span><span class="icon">✅</span>Validés</span>
+      <span class="nav-badge ok" id="badge-validated">0</span>
+    </div>
+    <div class="nav-item" onclick="setView('pending')" id="nav-pending">
+      <span><span class="icon">⚠️</span>À vérifier</span>
+      <span class="nav-badge warn" id="badge-pending">0</span>
+    </div>
+    <div class="nav-item" onclick="setView('quarantine')" id="nav-quarantine">
+      <span><span class="icon">❌</span>Quarantaine</span>
+      <span class="nav-badge err" id="badge-quarantine">0</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:14px;">Import</div>
+    <div class="nav-item" onclick="document.getElementById('fileInput').click()">
+      <span><span class="icon">📂</span>Importer fichier</span>
+    </div>
+    <div class="nav-item" onclick="document.getElementById('mediainfoInput').click()" title="Importer un JSON produit par mediainfo --Output=JSON">
+      <span><span class="icon">🎞</span>Importer Mediainfo</span>
+    </div>
+    <div class="nav-item" onclick="loadDB()">
+      <span><span class="icon">💾</span>Charger DB locale</span>
+    </div>
+    <div class="nav-item" onclick="clearAll()">
+      <span><span class="icon">🗑</span>Réinitialiser</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:14px;">Config</div>
+    <div style="padding: 8px 12px;">
+      <label style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">Seuil auto-validation</label>
+      <input type="range" min="50" max="99" value="80" id="thresholdSlider"
+        style="width:100%; accent-color:var(--accent);"
+        oninput="document.getElementById('thresholdVal').textContent=this.value">
+      <div style="font-family:var(--font-mono); font-size:12px; color:var(--accent2); text-align:right; margin-top:4px;">
+        Score ≥ <span id="thresholdVal">80</span>
+      </div>
+    </div>
+    <div style="padding: 4px 12px;">
+      <label style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">Clé API OMDB</label>
+      <input type="text" id="apiKeyInput" placeholder="ex: a1b2c3d4"
+        class="modal-input" style="width:100%; font-size:12px; padding:7px 10px;"
+        oninput="OMDB_KEY = this.value">
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="mainArea">
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="uploadZone"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="e=>e.preventDefault()"
+      ondrop="handleDrop(event)">
+      <div class="upload-zone-icon">📁</div>
+      <div class="upload-zone-title">Importer votre bibliothèque</div>
+      <div class="upload-zone-sub">Glissez un CSV, TXT ou JSON · Formats WizTree, PowerShell, etc.</div>
+    </div>
+    <input type="file" id="fileInput" accept=".csv,.txt,.json" onchange="handleFile(event)">
+    <input type="file" id="mediainfoInput" accept=".json" onchange="handleMediainfoFile(event)" style="display:none">
+
+    <!-- Scan progress -->
+    <div class="scan-progress" id="scanProgress">
+      <div class="scan-progress-header">
+        <div class="scan-progress-title">
+          <div class="spinner" style="display:inline-block; vertical-align:middle; margin-right:8px;"></div>
+          Scan en cours…
+        </div>
+        <div class="scan-progress-count" id="scanCount">0 / 0</div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="scan-current" id="scanCurrent">Initialisation…</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-card">
+        <div class="stat-label">Total fichiers</div>
+        <div class="stat-value blue" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Validés auto</div>
+        <div class="stat-value green" id="statValidated">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">À vérifier</div>
+        <div class="stat-value amber" id="statPending">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Quarantaine</div>
+        <div class="stat-value red" id="statQuarantine">0</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea">
+      <div class="empty-state">
+        <div class="empty-state-icon">🎬</div>
+        <div class="empty-state-title">Aucune donnée</div>
+        <div class="empty-state-sub">Importez un fichier CSV ou chargez une DB existante</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Verify Modal -->
+<div class="modal-overlay" id="verifyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Vérification manuelle</div>
+        <div class="modal-subtitle" id="modalSubtitle">Fichier : —</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-queue" id="modalQueue" style="display:none">
+      <span>📋 File d'attente : <span class="queue-num" id="queueInfo"></span></span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteCurrentEntry()" style="margin-left:auto;color:var(--red);border-color:var(--red);opacity:.7;" title="Supprimer cette entrée">🗑 Supprimer</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;" id="deleteAlwaysRow">
+      <button class="btn btn-ghost btn-sm" onclick="deleteCurrentEntry()" style="color:var(--red);border-color:var(--red);opacity:.7;">🗑 Supprimer cette entrée</button>
+    </div>
+    <div class="modal-search-bar">
+      <input class="modal-input" id="modalSearchInput" type="text" placeholder="Titre à rechercher…"
+        onkeydown="if(event.key==='Enter') searchOMDB()">
+      <button class="btn btn-primary" onclick="searchOMDB()">
+        🔍 Rechercher
+      </button>
+    </div>
+    <div id="modalResults" class="result-list">
+      <div style="text-align:center; padding:24px; color:var(--text-dim); font-size:13px;">
+        Tapez un titre et lancez la recherche
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mediainfo Detail Modal -->
+<div class="modal-overlay" id="miModal">
+  <div class="modal" style="width:680px;max-width:96vw;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Détail Mediainfo</div>
+        <div class="modal-subtitle" id="miModalFilename" style="font-size:11px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
+      </div>
+      <button class="modal-close" onclick="closeMiModal()">✕</button>
+    </div>
+    <div id="miModalBody"></div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  INDEXARR — Application principale
+// ═══════════════════════════════════════════════
+
+let OMDB_KEY = '';
+let apiCallsUsed = 0;
+const API_LIMIT = 1000;
+
+// Base de données en mémoire (persistée en JSON)
+let db = {
+  entries: [],    // { id, rawName, parsedName, parsedYear, type, status, matchScore, imdbId, tvdbId, metadata, indexed_at }
+  version: 1,
+  lastScan: null
+};
+
+let currentView = 'all';
+let verifyQueue = [];   // IDs des entrées à vérifier
+let currentVerifyIdx = 0;
+let currentVerifyId = null;
+
+// ── PARSING ──────────────────────────────────────
+function parseFileName(raw) {
+  // Nettoie le nom de fichier : retire extension
+  let name = raw.replace(/\.(mkv|mp4|avi|mov|ts|m2ts|wmv|flv|webm)$/i, '');
+
+  // Détecte le type (série vs film)
+  let type = 'movie';
+  if (/S\d{2}E\d{2}|saison\s*\d|season\s*\d|\d+x\d+/i.test(name)) type = 'series';
+
+  // Extraction de l'année : cherche 4 chiffres entre 1900 et 2099
+  let year = null;
+  const yearMatch = name.match(/[\(\[\.\s_-](19\d{2}|20\d{2})[\)\]\.\s_-]|[\(\[\.\s_-](19\d{2}|20\d{2})$/);
+  if (yearMatch) {
+    year = parseInt(yearMatch[1] || yearMatch[2]);
+  }
+
+  // Extrait le titre en coupant à l'année ou aux marqueurs qualité
+  let title = name;
+
+  // Supprime tout ce qui suit l'année (si trouvée)
+  if (year) {
+    // Coupe à l'année (inclusif ou non)
+    title = title.replace(new RegExp(`[\\(\\[\\.\\s_-]?${year}.*$`), '');
+  }
+
+  // Supprime les marqueurs de qualité et codecs courants
+  title = title.replace(/\b(4K|2160p|1080p|720p|480p|BluRay|BDRip|BRRip|DVDRip|WEB-DL|WEBRip|HDTV|x264|x265|HEVC|AAC|AC3|DTS|HDR|SDR|Remux|NF|AMZN|DSNP|HMAX)\b.*/i, '');
+
+  // Remplace séparateurs communs par espace
+  title = title.replace(/[._]/g, ' ');
+
+  // Supprime les parenthèses/crochets vides ou avec peu de contenu
+  title = title.replace(/\(\s*\)|\[\s*\]/g, '');
+  title = title.replace(/\([^)]{0,3}\)|\[[^\]]{0,3}\]/g, '');
+
+  // Nettoie espaces multiples et tirets de fin
+  title = title.replace(/\s{2,}/g, ' ').trim();
+  title = title.replace(/[-–—\s]+$/, '').trim();
+
+  // Si le titre est vide ou trop court, utilise le nom original sans extension
+  if (!title || title.length < 2) {
+    title = raw.replace(/\.[^.]+$/, '').replace(/[._]/g, ' ').trim();
+  }
+
+  return { title, year, type };
+}
+
+// Calcule un score de similarité approximatif
+function fuzzyScore(a, b) {
+  a = a.toLowerCase().trim();
+  b = b.toLowerCase().trim();
+  if (a === b) return 100;
+  // Simple : ratio de caractères communs
+  const shorter = a.length < b.length ? a : b;
+  const longer  = a.length < b.length ? b : a;
+  let matches = 0;
+  for (let c of shorter) if (longer.includes(c)) matches++;
+  return Math.round((matches / longer.length) * 100);
+}
+
+// ── API OMDB ──────────────────────────────────────
+function bumpApiCalls(n = 1) {
+  apiCallsUsed += n;
+  updateQuotaUI();
+}
+
+function updateQuotaUI() {
+  const pct = Math.min((apiCallsUsed / API_LIMIT) * 100, 100);
+  const fill = document.getElementById('quotaFill');
+  document.getElementById('quotaText').textContent = `${apiCallsUsed}/${API_LIMIT}`;
+  fill.style.width = pct + '%';
+  fill.className = 'api-quota-fill' + (pct > 90 ? ' danger' : pct > 70 ? ' warn' : '');
+}
+
+// OMDB : recherche par titre (s= = search multi-résultats)
+async function searchOMDB_raw(query, year, type = 'movie') {
+  if (!OMDB_KEY) {
+    toast('⚠️ Entrez votre clé API OMDB dans la sidebar', 'warn');
+    return null;
+  }
+  if (apiCallsUsed >= API_LIMIT) {
+    toast('🚫 Quota API atteint (1000/jour)', 'err');
+    return null;
+  }
+  bumpApiCalls();
+  const omdbType = type === 'series' ? 'series' : 'movie';
+  const url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${encodeURIComponent(query)}&type=${omdbType}${year ? '&y=' + year : ''}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { toast('❌ Erreur API OMDB : ' + r.status, 'err'); return null; }
+    const data = await r.json();
+    if (data.Response === 'False') return null;
+    // Normalise les résultats
+    return (data.Search || []).map(item => ({
+      imdbId: item.imdbID,
+      title:  item.Title,
+      year:   item.Year ? item.Year.replace(/[^0-9]/g, '').substring(0, 4) : null,
+      poster: item.Poster !== 'N/A' ? item.Poster : null,
+      type:   item.Type
+    }));
+  } catch(e) {
+    toast('❌ Impossible de joindre OMDB', 'err');
+    return null;
+  }
+}
+
+// OMDB : détail par imdbId
+async function fetchOMDB_detail(imdbId) {
+  if (!OMDB_KEY || !imdbId) return null;
+  bumpApiCalls();
+  try {
+    const r = await fetch(`https://www.omdbapi.com/?apikey=${OMDB_KEY}&i=${imdbId}&plot=short`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.Response === 'True' ? d : null;
+  } catch { return null; }
+}
+
+// ── IMPORT ────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+async function processFile(file) {
+  const text = await file.text();
+  let lines = [];
+
+  if (file.name.endsWith('.json')) {
+    // Vérifie si c'est une DB Indexarr
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.version && parsed.entries) {
+        // Merge : on ne rescanne que les nouvelles entrées
+        mergeScanDB(parsed);
+        return;
+      }
+      // Sinon, JSON de fichiers
+      lines = extractLinesFromJSON(parsed);
+    } catch { toast('❌ JSON invalide', 'err'); return; }
+  } else {
+    lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    // CSV : prend la première colonne ou ligne entière
+    lines = lines.map(l => l.split(/[,;\t]/)[0].trim());
+  }
+
+  // Filtre les lignes qui ressemblent à des chemins ou noms de fichiers
+  const fileExts = /\.(mkv|mp4|avi|mov|ts|m2ts|wmv|flv|webm)/i;
+  lines = lines.filter(l => fileExts.test(l) || l.length > 3);
+
+  // Extrait les noms de fichiers à partir des chemins
+  lines = lines.map(l => {
+    // Chemin complet : prend le dernier segment
+    const parts = l.replace(/\\/g, '/').split('/');
+    return parts[parts.length - 1];
+  }).filter(Boolean);
+
+  // Déduplique
+  lines = [...new Set(lines)];
+
+  if (lines.length === 0) { toast('⚠️ Aucun fichier détecté', 'warn'); return; }
+
+  toast(`📂 ${lines.length} fichiers détectés, lancement du scan…`, 'info');
+  await scanFiles(lines);
+}
+
+function extractLinesFromJSON(obj) {
+  if (Array.isArray(obj)) return obj.map(x => typeof x === 'string' ? x : JSON.stringify(x));
+  if (typeof obj === 'object') return Object.values(obj).flat().map(x => typeof x === 'string' ? x : '').filter(Boolean);
+  return [];
+}
+
+// Merge une DB Indexarr importée (évite rescan des validés)
+function mergeScanDB(importedDB) {
+  const existingIds = new Set(db.entries.map(e => e.rawName));
+  let added = 0, skipped = 0;
+  for (const entry of importedDB.entries) {
+    if (existingIds.has(entry.rawName)) { skipped++; continue; }
+    db.entries.push(entry);
+    added++;
+  }
+  saveDB();
+  refreshUI();
+  toast(`✅ Importé : ${added} nouveaux, ${skipped} déjà présents (ignorés)`, 'ok');
+}
+
+// ── SCAN ──────────────────────────────────────────
+async function scanFiles(lines) {
+  const total = lines.length;
+  const progress = document.getElementById('scanProgress');
+  const progressFill = document.getElementById('progressFill');
+  const scanCount = document.getElementById('scanCount');
+  const scanCurrent = document.getElementById('scanCurrent');
+
+  progress.classList.add('active');
+  document.getElementById('statsRow').style.display = 'grid';
+
+  // Pré-comptage
+  let done = 0;
+  const BATCH = 3; // appels parallèles max
+
+  // Identifie les fichiers déjà en DB (par rawName) pour ne pas rescanner
+  const existingNames = new Set(db.entries.map(e => e.rawName));
+
+  // Crée les entrées "en cours" pour les nouveaux fichiers
+  const newLines = lines.filter(l => !existingNames.has(l));
+  if (newLines.length === 0) {
+    toast('ℹ️ Tous les fichiers sont déjà dans la DB', 'info');
+    progress.classList.remove('active');
+    return;
+  }
+
+  // Ajoute des entrées skeleton immédiatement
+  for (const rawName of newLines) {
+    const { title, year, type } = parseFileName(rawName);
+    db.entries.push({
+      id: crypto.randomUUID(),
+      rawName,
+      parsedName: title,
+      parsedYear: year,
+      type,
+      status: 'scanning',
+      matchScore: null,
+      imdbId: null,
+      tvdbId: null,
+      metadata: null,
+      indexed_at: new Date().toISOString()
+    });
+  }
+  refreshUI();
+
+  // Scan par batches
+  for (let i = 0; i < newLines.length; i += BATCH) {
+    const batch = newLines.slice(i, i + BATCH);
+    await Promise.all(batch.map(async rawName => {
+      await scanSingleFile(rawName);
+      done++;
+      const pct = Math.round((done / newLines.length) * 100);
+      progressFill.style.width = pct + '%';
+      scanCount.textContent = `${done + (lines.length - newLines.length)} / ${total}`;
+      scanCurrent.textContent = rawName;
+      refreshUI(); // mise à jour progressive
+    }));
+  }
+
+  progress.classList.remove('active');
+  saveDB();
+  toast(`✅ Scan terminé : ${done} fichiers traités`, 'ok');
+  buildVerifyQueue();
+}
+
+async function scanSingleFile(rawName) {
+  const entry = db.entries.find(e => e.rawName === rawName);
+  if (!entry) return;
+
+  const { title, year, type } = parseFileName(rawName);
+  entry.parsedName = title;
+  entry.parsedYear = year;
+  entry.type = type;
+
+  if (!OMDB_KEY) {
+    entry.status = 'pending';
+    return;
+  }
+
+  const results = await searchOMDB_raw(title, year, type);
+  if (!results || results.length === 0) {
+    entry.status = 'quarantine';
+    return;
+  }
+
+  const top = results[0];
+  // Score : similarité titre + bonus année
+  let score = fuzzyScore(title, top.title || '');
+  if (year && top.year && year === parseInt(top.year)) score = Math.min(score + 15, 100);
+
+  entry.matchScore = score;
+  entry.imdbId = top.imdbId;
+  entry.metadata = {
+    title:   top.title,
+    year:    top.year,
+    poster:  top.poster || null,
+    overview: null,
+    type
+  };
+
+  const threshold = parseInt(document.getElementById('thresholdSlider').value);
+  entry.status = score >= threshold ? 'validated' : 'pending';
+}
+
+// ── VERIFY QUEUE ──────────────────────────────────
+function buildVerifyQueue() {
+  verifyQueue = db.entries
+    .filter(e => e.status === 'pending' || e.status === 'quarantine')
+    .map(e => e.id);
+  currentVerifyIdx = 0;
+  updateBadges();
+}
+
+function openVerify(entryId) {
+  currentVerifyId = entryId;
+  // Si on ouvre depuis la liste générale, construit la queue à partir de là
+  if (!verifyQueue.includes(entryId)) {
+    verifyQueue = [entryId];
+    currentVerifyIdx = 0;
+  } else {
+    currentVerifyIdx = verifyQueue.indexOf(entryId);
+  }
+  renderVerifyModal();
+  document.getElementById('verifyModal').classList.add('open');
+}
+
+function renderVerifyModal() {
+  const entry = db.entries.find(e => e.id === verifyQueue[currentVerifyIdx]);
+  if (!entry) { closeModal(); return; }
+
+  currentVerifyId = entry.id;
+  document.getElementById('modalTitle').textContent = 'Vérification manuelle';
+  document.getElementById('modalSubtitle').textContent = `📄 ${entry.rawName}`;
+
+  // File d'attente
+  const remaining = verifyQueue.length - currentVerifyIdx;
+  if (remaining > 1) {
+    document.getElementById('modalQueue').style.display = 'flex';
+    document.getElementById('queueInfo').textContent = `${currentVerifyIdx + 1} / ${verifyQueue.length} — ${remaining - 1} restant(s)`;
+  } else {
+    document.getElementById('modalQueue').style.display = 'none';
+  }
+
+  // Pré-remplit la recherche avec le titre parsé (NON avec le rawName)
+  const searchInput = document.getElementById('modalSearchInput');
+  searchInput.value = entry.parsedName || entry.rawName.replace(/\.[^.]+$/, '');
+
+  document.getElementById('modalResults').innerHTML = `
+    <div style="text-align:center; padding:24px; color:var(--text-dim); font-size:13px;">
+      Cliquez sur Rechercher pour trouver le bon titre
+    </div>`;
+}
+
+async function searchOMDB() {
+  const query = document.getElementById('modalSearchInput').value.trim();
+  if (!query) return;
+
+  const entry = db.entries.find(e => e.id === currentVerifyId);
+  const type = entry ? entry.type : 'movie';
+
+  document.getElementById('modalResults').innerHTML = `
+    <div style="text-align:center; padding:24px; display:flex; align-items:center; justify-content:center; gap:10px; color:var(--text-dim); font-size:13px;">
+      <div class="spinner"></div> Recherche OMDB en cours…
+    </div>`;
+
+  const results = await searchOMDB_raw(query, null, type);
+  if (!results || results.length === 0) {
+    document.getElementById('modalResults').innerHTML = `<div style="text-align:center;padding:24px;color:var(--red)">Aucun résultat OMDB</div>`;
+    return;
+  }
+
+  document.getElementById('modalResults').innerHTML = results.slice(0, 8).map(item => {
+    const safeTitle   = escHtml(item.title || '');
+    const safeImdbId  = escHtml(item.imdbId || '');
+    const safePoster  = escHtml(item.poster || '');
+    return `
+      <div class="result-item" onclick="selectResult('${safeImdbId}', '${safeTitle}', '${item.year || ''}', '${type}', '${safePoster}')">
+        <div class="result-poster">
+          ${item.poster ? `<img src="${escHtml(item.poster)}" alt="">` : '🎬'}
+        </div>
+        <div class="result-info">
+          <div class="result-title">${safeTitle}</div>
+          <div class="result-meta">${safeImdbId} · ${item.year || '?'}</div>
+          <div class="result-overview">${escHtml(item.type || '')}</div>
+        </div>
+        <div class="result-check">○</div>
+      </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function selectResult(imdbId, title, year, type, poster) {
+  const entry = db.entries.find(e => e.id === currentVerifyId);
+  if (!entry) return;
+
+  // Met à jour l'entrée
+  entry.imdbId = imdbId;
+  entry.status = 'validated';
+  entry.matchScore = 100;
+  entry.metadata = {
+    title,
+    year,
+    poster: poster || null,
+    overview: null,
+    type
+  };
+  entry.indexed_at = new Date().toISOString();
+
+  // Feedback visuel
+  document.querySelectorAll('.result-item').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  event.currentTarget.querySelector('.result-check').textContent = '✅';
+
+  saveDB();
+  updateBadges();
+
+  toast(`✅ "${title}" (${year || '?'}) validé`, 'ok');
+
+  // Passe automatiquement au suivant après 600ms
+  setTimeout(() => {
+    currentVerifyIdx++;
+    if (currentVerifyIdx < verifyQueue.length) {
+      renderVerifyModal();
+    } else {
+      closeModal();
+      toast('🎉 Toutes les vérifications sont terminées !', 'ok');
+    }
+    refreshUI();
+  }, 600);
+}
+
+function deleteCurrentEntry() {
+  const id = currentVerifyId || (verifyQueue[currentVerifyIdx]);
+  if (!id) return;
+  const entry = db.entries.find(e => e.id === id);
+  if (!entry) return;
+  if (!confirm(`Supprimer "${entry.rawName}" de la DB ?`)) return;
+  db.entries = db.entries.filter(e => e.id !== id);
+  // Retire de la queue
+  verifyQueue = verifyQueue.filter(qid => qid !== id);
+  saveDB();
+  toast(`🗑 "${entry.rawName}" supprimé`, 'info');
+  // Passe au suivant ou ferme
+  if (currentVerifyIdx >= verifyQueue.length) currentVerifyIdx = Math.max(0, verifyQueue.length - 1);
+  if (verifyQueue.length === 0) {
+    closeModal();
+  } else {
+    renderVerifyModal();
+  }
+  refreshUI();
+}
+
+function closeModal() {
+  document.getElementById('verifyModal').classList.remove('open');
+  currentVerifyId = null;
+  refreshUI();
+}
+
+// ── UI ────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-' + v)?.classList.add('active');
+  renderTable();
+}
+
+function refreshUI() {
+  updateBadges();
+  renderTable();
+  updateStats();
+}
+
+function updateStats() {
+  const all = db.entries.filter(e => e.status !== 'scanning');
+  document.getElementById('statTotal').textContent = all.length;
+  document.getElementById('statValidated').textContent = all.filter(e => e.status === 'validated').length;
+  document.getElementById('statPending').textContent = all.filter(e => e.status === 'pending').length;
+  document.getElementById('statQuarantine').textContent = all.filter(e => e.status === 'quarantine').length;
+}
+
+function updateBadges() {
+  const all = db.entries;
+  document.getElementById('badge-all').textContent = all.filter(e => e.status !== 'scanning').length;
+  document.getElementById('badge-validated').textContent = all.filter(e => e.status === 'validated').length;
+  document.getElementById('badge-pending').textContent = all.filter(e => e.status === 'pending').length;
+  document.getElementById('badge-quarantine').textContent = all.filter(e => e.status === 'quarantine').length;
+
+  const dbDot = document.getElementById('dbDot');
+  const dbLabel = document.getElementById('dbLabel');
+  if (all.length > 0) {
+    dbDot.style.background = 'var(--green)';
+    dbLabel.textContent = `DB · ${all.length} entrées`;
+  }
+}
+
+function renderTable() {
+  const area = document.getElementById('resultsArea');
+  const statsRow = document.getElementById('statsRow');
+
+  let filtered = db.entries.filter(e => {
+    if (currentView === 'all') return e.status !== 'scanning';
+    return e.status === currentView;
+  });
+
+  // Sépare : scanning en premier
+  const scanning = db.entries.filter(e => e.status === 'scanning');
+
+  if (filtered.length === 0 && scanning.length === 0) {
+    area.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🎬</div>
+        <div class="empty-state-title">Aucune entrée</div>
+        <div class="empty-state-sub">Importez un fichier ou changez le filtre</div>
+      </div>`;
+    return;
+  }
+
+  statsRow.style.display = 'grid';
+
+  const pendingQueue = db.entries.filter(e => e.status === 'pending' || e.status === 'quarantine');
+
+  area.innerHTML = `
+    <div class="results-header">
+      <div class="results-title">Résultats <span style="color:var(--text-dim);font-size:14px;font-weight:400">(${filtered.length})</span></div>
+      <div class="results-actions">
+        ${pendingQueue.length > 0 ? `<button class="btn btn-primary btn-sm" onclick="startBatchVerify()">⚠️ Vérifier les ${pendingQueue.length} en attente</button>` : ''}
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fichier d'origine</th>
+            <th>Titre parsé</th>
+            <th>Correspondance OMDB</th>
+            <th>Année</th>
+            <th>Score</th>
+            <th>Statut</th>
+            <th>Mediainfo</th>
+            <th>IDs</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${scanning.slice(0,5).map(e => `
+            <tr>
+              <td colspan="9">
+                <div style="display:flex;align-items:center;gap:10px; color:var(--text-dim); font-size:12px; font-family:var(--font-mono)">
+                  <div class="spinner"></div> ${escHtml(e.rawName)}
+                </div>
+              </td>
+            </tr>`).join('')}
+          ${scanning.length > 5 ? `<tr><td colspan="9" style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px;">…et ${scanning.length - 5} autres en cours</td></tr>` : ''}
+          ${filtered.map(e => renderRow(e)).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderRow(e) {
+  const statusBadge = {
+    validated:  `<span class="badge badge-ok">✓ Validé</span>`,
+    pending:    `<span class="badge badge-warn">⚠ À vérifier</span>`,
+    quarantine: `<span class="badge badge-err">✗ Quarantaine</span>`,
+    scanning:   `<span class="badge badge-info">… Scan</span>`
+  }[e.status] || '';
+
+  const score = e.matchScore !== null
+    ? `<div class="score-bar">
+        <div class="score-track"><div class="score-fill" style="width:${e.matchScore}%;background:${e.matchScore>=80?'var(--green)':e.matchScore>=50?'var(--amber)':'var(--red)'}"></div></div>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${Math.round(e.matchScore)}</span>
+       </div>`
+    : `<span style="color:var(--text-dim);font-size:12px">—</span>`;
+
+  const omdbTitle = e.metadata ? escHtml(e.metadata.title || '—') : '—';
+  const year = e.metadata?.year || e.parsedYear || '—';
+  const poster = e.metadata?.poster
+    ? `<img src="${e.metadata.poster}" style="width:24px;height:34px;border-radius:3px;object-fit:cover;vertical-align:middle;margin-right:6px;" alt="">`
+    : '';
+
+  const ids = [];
+  if (e.imdbId) ids.push(`<span class="badge badge-info" style="font-size:9px;">IMDb ${escHtml(String(e.imdbId))}</span>`);
+  if (e.tvdbId) ids.push(`<span class="badge badge-info" style="font-size:9px;">TVDB ${escHtml(String(e.tvdbId))}</span>`);
+
+  const miCell = renderMediainfoBadges(e);
+
+  const actions = `
+    <div style="display:flex;gap:5px;align-items:center;">
+      ${(e.status === 'pending' || e.status === 'quarantine')
+        ? `<button class="btn btn-ghost btn-sm" onclick="openVerify('${e.id}')">🔍 Corriger</button>`
+        : `<button class="btn btn-ghost btn-sm" onclick="resetEntry('${e.id}')">↺</button>`}
+      <button class="btn btn-ghost btn-sm" onclick="deleteEntry('${e.id}')" style="color:var(--red);border-color:var(--red);opacity:.6;" title="Supprimer">🗑</button>
+    </div>`;
+
+  return `
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(e.rawName)}">${escHtml(e.rawName)}</td>
+      <td class="td-main">${escHtml(e.parsedName || '—')}</td>
+      <td>${poster}${omdbTitle}</td>
+      <td style="font-family:var(--font-mono);font-size:12px">${year}</td>
+      <td>${score}</td>
+      <td>${statusBadge}</td>
+      <td>${miCell}</td>
+      <td>${ids.join(' ') || '<span style="color:var(--text-dim);font-size:11px">—</span>'}</td>
+      <td>${actions}</td>
+    </tr>`;
+}
+
+function resetEntry(id) {
+  const entry = db.entries.find(e => e.id === id);
+  if (!entry) return;
+  entry.status = 'pending';
+  entry.imdbId = null;
+  entry.metadata = null;
+  entry.matchScore = null;
+  saveDB();
+  refreshUI();
+}
+
+function deleteEntry(id) {
+  const entry = db.entries.find(e => e.id === id);
+  if (!entry) return;
+  if (!confirm(`Supprimer "${entry.rawName}" ?`)) return;
+  db.entries = db.entries.filter(e => e.id !== id);
+  verifyQueue = verifyQueue.filter(qid => qid !== id);
+  saveDB();
+  refreshUI();
+  toast(`🗑 Supprimé`, 'info');
+}
+
+function startBatchVerify() {
+  buildVerifyQueue();
+  if (verifyQueue.length === 0) { toast('✅ Rien à vérifier', 'ok'); return; }
+  currentVerifyIdx = 0;
+  renderVerifyModal();
+  document.getElementById('verifyModal').classList.add('open');
+}
+
+// ── PERSISTANCE ────────────────────────────────────
+function saveDB() {
+  db.lastScan = new Date().toISOString();
+  try {
+    localStorage.setItem('indexarr_db', JSON.stringify(db));
+  } catch(e) {
+    // Si localStorage plein, on continue sans erreur critique
+  }
+}
+
+function loadDB() {
+  try {
+    const stored = localStorage.getItem('indexarr_db');
+    if (!stored) { toast('ℹ️ Aucune DB locale trouvée', 'info'); return; }
+    db = JSON.parse(stored);
+    refreshUI();
+    toast(`💾 DB chargée : ${db.entries.length} entrées`, 'ok');
+  } catch(e) {
+    toast('❌ Erreur lecture DB locale', 'err');
+  }
+}
+
+// ── EXPORT ────────────────────────────────────────
+function exportDB() {
+  const data = JSON.stringify(db, null, 2);
+  downloadFile(data, 'indexarr-db.json', 'application/json');
+}
+
+function exportCSV() {
+  const headers = ['raw_name','parsed_name','parsed_year','type','status','match_score','imdb_id','tvdb_id','title','year','poster_url','indexed_at','mi_format','mi_duration_s','mi_file_size','mi_overall_bitrate','mi_video_codec','mi_video_resolution','mi_video_hdr','mi_audio_main','mi_audio_count','mi_sub_count'];
+  const rows = db.entries
+    .filter(e => e.status !== 'scanning')
+    .map(e => [
+      `"${(e.rawName||'').replace(/"/g,'""')}"`,
+      `"${(e.parsedName||'').replace(/"/g,'""')}"`,
+      e.parsedYear || '',
+      e.type || '',
+      e.status || '',
+      e.matchScore !== null ? Math.round(e.matchScore) : '',
+      e.imdbId || '',
+      e.tvdbId || '',
+      `"${(e.metadata?.title||'').replace(/"/g,'""')}"`,
+      e.metadata?.year || '',
+      e.metadata?.poster || '',
+      e.indexed_at || '',
+      e.mediainfo?.format || '',
+      e.mediainfo?.duration_s ?? '',
+      e.mediainfo?.file_size ?? '',
+      e.mediainfo?.overall_bitrate ?? '',
+      e.mediainfo?.video?.codec || '',
+      (e.mediainfo?.video?.width && e.mediainfo?.video?.height) ? (e.mediainfo.video.width + 'x' + e.mediainfo.video.height) : '',
+      e.mediainfo?.video?.hdr_format || '',
+      e.mediainfo?.audio?.[0] ? ((e.mediainfo.audio[0].codec||'')+' '+(e.mediainfo.audio[0].channels||'')+'ch '+(e.mediainfo.audio[0].language||'')).trim() : '',
+      e.mediainfo?.audio?.length ?? '',
+      e.mediainfo?.subtitles?.length ?? ''
+    ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  downloadFile(csv, 'indexarr-export.csv', 'text/csv');
+}
+
+function downloadFile(content, filename, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = filename;
+  a.click();
+}
+
+function clearAll() {
+  if (!confirm('Réinitialiser toutes les données ?')) return;
+  db = { entries: [], version: 1, lastScan: null };
+  apiCallsUsed = 0;
+  updateQuotaUI();
+  saveDB();
+  refreshUI();
+  toast('🗑 Données réinitialisées', 'info');
+}
+
+// ── TOAST ─────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const colors = { ok: 'var(--green)', warn: 'var(--amber)', err: 'var(--red)', info: 'var(--accent2)' };
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.borderLeftColor = colors[type] || colors.info;
+  el.style.borderLeftWidth = '3px';
+  el.innerHTML = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── INIT ──────────────────────────────────────────
+// Chargement auto de la DB locale au démarrage
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const stored = localStorage.getItem('indexarr_db');
+    if (stored) {
+      db = JSON.parse(stored);
+      if (db.entries && db.entries.length > 0) {
+        refreshUI();
+        document.getElementById('statsRow').style.display = 'grid';
+        toast(`💾 DB restaurée : ${db.entries.length} entrées`, 'ok');
+      }
+    }
+  } catch(e) {}
+
+  // Drag & drop
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', handleDrop);
+
+  updateQuotaUI();
+  buildVerifyQueue();
+});
+
+// ── MEDIAINFO ──────────────────────────────────────────────────────────────
+
+function parseMediainfoJSON(raw) {
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { return null; }
+  if (parsed && parsed.media) return [extractOneMediainfo(parsed.media)];
+  if (Array.isArray(parsed)) return parsed.map(item => item.media ? extractOneMediainfo(item.media) : null).filter(Boolean);
+  return null;
+}
+
+function extractOneMediainfo(media) {
+  const tracks   = media.track || [];
+  const filename = (media['@ref'] || '').replace(/\\/g, '/').split('/').pop();
+  const general  = tracks.find(t => t['@type'] === 'General') || {};
+  const video    = tracks.find(t => t['@type'] === 'Video')   || null;
+  const audios   = tracks.filter(t => t['@type'] === 'Audio');
+  const subs     = tracks.filter(t => t['@type'] === 'Text');
+  const mi = {
+    format:          general.Format || null,
+    duration_s:      general.Duration ? Math.round(parseFloat(general.Duration)) : null,
+    file_size:       general.FileSize ? parseInt(general.FileSize) : null,
+    overall_bitrate: general.OverallBitRate ? parseInt(general.OverallBitRate) : null,
+    video: null, audio: [], subtitles: [],
+    scanned_at: new Date().toISOString()
+  };
+  if (video) {
+    mi.video = {
+      codec:      video.Format || null,
+      profile:    video.Format_Profile || null,
+      width:      video.Width  ? parseInt(video.Width)  : null,
+      height:     video.Height ? parseInt(video.Height) : null,
+      frame_rate: video.FrameRate ? parseFloat(video.FrameRate) : null,
+      bit_depth:  video.BitDepth ? parseInt(video.BitDepth) : null,
+      hdr_format: video.HDR_Format || video['HDR_Format/String'] || null,
+      bitrate:    video.BitRate ? parseInt(video.BitRate) : null
+    };
+  }
+  audios.forEach((a, idx) => {
+    mi.audio.push({
+      index:      idx,
+      codec:      a.Format || null,
+      commercial: a.Format_Commercial_IfAny || null,
+      channels:   a.Channels ? parseInt(a.Channels) : null,
+      language:   a.Language || null,
+      title:      a.Title || null,
+      bitrate:    a.BitRate ? parseInt(a.BitRate) : null,
+      default:    a.Default === 'Yes'
+    });
+  });
+  subs.forEach((s, idx) => {
+    const isForced = s.Forced === 'Yes' || (s.Title || '').toLowerCase().includes('forced');
+    mi.subtitles.push({
+      index:    idx,
+      language: s.Language || null,
+      format:   s.Format || null,
+      title:    s.Title || null,
+      forced:   isForced
+    });
+  });
+  return { filename, mediainfo: mi };
+}
+
+function handleMediainfoFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => importMediainfo(ev.target.result);
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function importMediainfo(raw) {
+  const results = parseMediainfoJSON(raw);
+  if (!results || results.length === 0) {
+    toast('❌ JSON mediainfo invalide ou vide', 'err'); return;
+  }
+  let matched = 0, created = 0, unmatched = 0;
+
+  // Normalise un nom de fichier pour la comparaison : bas de casse, trim, sans chemin
+  const normName = s => (s || '').replace(/\\/g, '/').split('/').pop().trim().toLowerCase();
+
+  for (const { filename, mediainfo } of results) {
+    if (!filename) { unmatched++; continue; }
+    const fnNorm = normName(filename);
+
+    // 1. Recherche exacte sur rawName (ou fin de chemin)
+    let entry = db.entries.find(e => {
+      const rn = e.rawName || '';
+      return rn === filename ||
+             normName(rn) === fnNorm ||
+             rn.endsWith('/' + filename) ||
+             rn.endsWith('\\' + filename);
+    });
+
+    // 2. Fallback : matching sans extension (ex: rawName sans .mkv dans la DB)
+    if (!entry) {
+      const fnNoExt = fnNorm.replace(/\.[^.]+$/, '');
+      entry = db.entries.find(e => {
+        const rnNorm = normName(e.rawName || '').replace(/\.[^.]+$/, '');
+        return rnNorm === fnNoExt;
+      });
+    }
+
+    if (entry) {
+      entry.mediainfo = mediainfo;
+      matched++;
+    } else {
+      // 3. Aucune correspondance : crée une entrée avec statut 'pending'
+      //    pour que l'info soit disponible dès le scan OMDB
+      const { title, year, type } = parseFileName(filename);
+      db.entries.push({
+        id: crypto.randomUUID(),
+        rawName: filename,
+        parsedName: title,
+        parsedYear: year,
+        type,
+        status: 'pending',
+        matchScore: null,
+        imdbId: null,
+        tvdbId: null,
+        metadata: null,
+        mediainfo,
+        indexed_at: new Date().toISOString()
+      });
+      created++;
+    }
+  }
+
+  if (matched > 0 || created > 0) {
+    saveDB(); refreshUI();
+    const parts = [];
+    if (matched > 0) parts.push(`${matched} mis à jour`);
+    if (created > 0) parts.push(`${created} créé(s) (à scanner)`);
+    if (unmatched > 0) parts.push(`${unmatched} ignoré(s)`);
+    toast(`🎞 Mediainfo : ${parts.join(', ')}`, 'ok');
+  } else {
+    toast(`⚠️ Aucune correspondance trouvée (${unmatched} fichier(s))`, 'warn');
+  }
+}
+
+function renderMediainfoBadges(entry) {
+  const mi = entry.mediainfo;
+  if (!mi) return '<span class="mi-none">—</span>';
+  const badges = [];
+  if (mi.video) {
+    const res = mi.video.height ? (
+      mi.video.height >= 2160 ? '4K' :
+      mi.video.height >= 1080 ? '1080p' :
+      mi.video.height >= 720  ? '720p' : mi.video.height + 'p') : '';
+    const codec = (mi.video.codec || '').replace('AVC','H.264').replace('HEVC','H.265');
+    if (res || codec) badges.push(`<span class="mi-badge mi-video">${escHtml([res,codec].filter(Boolean).join(' · '))}</span>`);
+    if (mi.video.hdr_format) {
+      const h = mi.video.hdr_format.includes('Dolby Vision') ? 'Dolby Vision' :
+                mi.video.hdr_format.includes('HDR10+') ? 'HDR10+' :
+                mi.video.hdr_format.includes('HDR10') ? 'HDR10' :
+                mi.video.hdr_format.split(' ')[0];
+      badges.push(`<span class="mi-badge mi-hdr">${escHtml(h)}</span>`);
+    }
+  }
+  if (mi.audio && mi.audio.length > 0) {
+    const main = mi.audio.find(a => a.default) || mi.audio[0];
+    const ch = main.channels ? (main.channels >= 8 ? '7.1' : main.channels >= 6 ? '5.1' : main.channels + 'ch') : '';
+    const lang = main.language ? ' ' + main.language.toUpperCase() : '';
+    const more = mi.audio.length > 1 ? ` +${mi.audio.length - 1}` : '';
+    const codec = main.commercial || main.codec || '';
+    badges.push(`<span class="mi-badge mi-audio">${escHtml(codec + (ch ? ' '+ch : '') + lang + more)}</span>`);
+  }
+  if (mi.subtitles && mi.subtitles.length > 0) {
+    const subLangs = [...new Set(mi.subtitles.map(s => (s.language||'??').toUpperCase()))].slice(0,3).join(' ');
+    badges.push(`<span class="mi-badge mi-sub">💬 ${subLangs}</span>`);
+  }
+  const btn = `<button class="mi-detail-btn" onclick="openMiModal('${entry.id}')">⋯</button>`;
+  return `<div class="mi-wrap">${badges.join('')}${btn}</div>`;
+}
+
+function openMiModal(entryId) {
+  const entry = db.entries.find(e => e.id === entryId);
+  if (!entry || !entry.mediainfo) return;
+  const mi = entry.mediainfo;
+  document.getElementById('miModalFilename').textContent = entry.rawName;
+  const fmtSize = s => s ? (s >= 1e9 ? (s/1e9).toFixed(2)+' GB' : (s/1e6).toFixed(1)+' MB') : null;
+  const fmtBr   = b => b ? (b >= 1e6 ? (b/1e6).toFixed(1)+' Mbps' : (b/1e3).toFixed(0)+' kbps') : null;
+  const fmtDur  = s => s ? `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m ${s%60}s` : null;
+  let html = '<div class="mi-modal-grid">';
+  html += `<div><div class="mi-section-title">⚙ Général</div><div class="mi-track-block">
+    ${miRow('Format', mi.format)}${miRow('Durée', fmtDur(mi.duration_s))}
+    ${miRow('Taille', fmtSize(mi.file_size))}${miRow('Bitrate global', fmtBr(mi.overall_bitrate))}
+  </div></div>`;
+  html += '<div><div class="mi-section-title">🎬 Vidéo</div>';
+  if (mi.video) {
+    html += `<div class="mi-track-block">
+      ${miRow('Codec', mi.video.codec)}${miRow('Profil', mi.video.profile)}
+      ${miRow('Résolution', mi.video.width && mi.video.height ? mi.video.width+' × '+mi.video.height : null)}
+      ${miRow('Fréquence', mi.video.frame_rate ? mi.video.frame_rate.toFixed(3)+' fps' : null)}
+      ${miRow('Profondeur', mi.video.bit_depth ? mi.video.bit_depth+' bits' : null)}
+      ${miRow('HDR', mi.video.hdr_format)}${miRow('Bitrate', fmtBr(mi.video.bitrate))}
+    </div>`;
+  } else html += '<div style="color:var(--text-dim);font-size:12px;padding:8px">Aucune piste vidéo</div>';
+  html += '</div></div>';
+  if (mi.audio && mi.audio.length > 0) {
+    html += `<div style="grid-column:1/-1"><div class="mi-section-title">🔊 Audio (${mi.audio.length} piste${mi.audio.length>1?'s':''})</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">`;
+    mi.audio.forEach(a => {
+      const ch = !a.channels?'':a.channels>=8?'7.1':a.channels>=6?'5.1':a.channels>=2?'Stéréo':'Mono';
+      html += `<div class="mi-track-block">
+        ${miRow('Codec',a.codec)}${miRow('Canaux',a.channels?ch+' ('+a.channels+')':null)}
+        ${miRow('Langue',a.language?a.language.toUpperCase():null)}${miRow('Bitrate',fmtBr(a.bitrate))}
+        ${a.default?'<div style="margin-top:4px"><span class="badge badge-ok" style="font-size:9px">Défaut</span></div>':''}
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+  if (mi.subtitles && mi.subtitles.length > 0) {
+    html += `<div style="grid-column:1/-1"><div class="mi-section-title">💬 Sous-titres (${mi.subtitles.length})</div><div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    mi.subtitles.forEach(s => {
+      const lang = s.language ? s.language.toUpperCase() : '??';
+      const title = s.title && s.title.toLowerCase() !== s.language ? ` · ${s.title}` : '';
+      html += `<span class="mi-badge mi-sub" style="font-size:10px;padding:3px 8px">${escHtml(lang+' '+(s.format||'')+title+(s.forced?' · Forcé':''))}</span>`;
+    });
+    html += '</div></div>';
+  }
+  if (mi.scanned_at) html += `<div style="grid-column:1/-1;margin-top:8px;font-size:11px;color:var(--text-dim);font-family:var(--font-mono)">Scanné le ${new Date(mi.scanned_at).toLocaleString('fr-BE')}</div>`;
+  html += '</div>';
+  document.getElementById('miModalBody').innerHTML = html;
+  document.getElementById('miModal').classList.add('open');
+}
+
+function miRow(label, value) {
+  if (value === null || value === undefined || value === '') return '';
+  return `<div class="mi-row"><span class="mi-key">${label}</span><span class="mi-val">${escHtml(String(value))}</span></div>`;
+}
+
+function closeMiModal() {
+  document.getElementById('miModal').classList.remove('open');
+}
+
+</script>
+</body>
+</html>
