@@ -144,5 +144,5 @@ double-clic sur indexarr-app.html
 ## Liens
 
 - [Guide d'utilisation (Wiki)](../../wiki/Flux-utilisateur)
-- [Documentation technique](indexarr-documentation-technique.md)
+- [Documentation technique](../../wiki/Documentation-Technique.md)
 - [Cle API OMDB gratuite](https://www.omdbapi.com/apikey.aspx)
